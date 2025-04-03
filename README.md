@@ -47,7 +47,7 @@ pip install anthropic requests beautifulsoup4 schedule configparser
 3. Generate the default configuration:
 
 ```bash
-python business_entity.py --setup
+python sentience.py --setup
 ```
 
 4. Edit the `config.ini` file with your API key and website path:
@@ -69,25 +69,25 @@ There are four ways to run the entity:
 1. **Schedule mode** (runs in the background on a daily schedule):
 
 ```bash
-nohup python business_entity.py > entity.out 2>&1 &
+nohup python sentience.py > entity.out 2>&1 &
 ```
 
 2. **Immediate mode** (runs once immediately):
 
 ```bash
-python business_entity.py --now
+python sentience.py --now
 ```
 
 3. **Setup only** (just creates the config file):
 
 ```bash
-python business_entity.py --setup
+python sentience.py --setup
 ```
 
 4. **Analysis mode** (check which sections need updating):
 
 ```bash
-python business_entity.py --analyze
+python sentience.py --analyze
 ```
 
 ## Communicating with the Entity
@@ -125,7 +125,7 @@ For more reliable operation, set up a cron job to run the entity:
 crontab -e
 
 # Add a line to run the entity daily at a random time (between 1-5 AM)
-0 3 * * * cd /path/to/script && python business_entity.py --now
+0 3 * * * cd /path/to/script && python sentience.py --now
 ```
 
 ## Security Considerations
@@ -137,7 +137,7 @@ crontab -e
 
 ## Troubleshooting
 
-Check the `business_entity.log` file for detailed logs of the entity's activities and any errors it encounters.
+Check the `sentience.log` file for detailed logs of the entity's activities and any errors it encounters.
 
 Common issues:
 - Permission problems when trying to write to the website directory
@@ -155,7 +155,7 @@ If you want to start with a more complex website, create it first, then let the 
 You can use the `--analyze` flag to see which sections the entity thinks need updating:
 
 ```bash
-python business_entity.py --analyze
+python sentience.py --analyze
 ```
 
 This will show you a list of sections and how many days it's been since they were last updated.
