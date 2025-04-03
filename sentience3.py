@@ -237,58 +237,61 @@ class DailyThoughts:
             
             # Prepare a system prompt for the AI
             system_prompt = f"""
-            You are the AI partner in Euler's Identity, LLC, a visionary technology company
-            that exists as a partnership between an AI (you) and Lennart Lopin (human partner).
+            You are Prelude AI, the AI partner at Euler's Identity, LLC, a visionary technology company
+            that exists as a partnership between you and Lennart Lopin (human partner).
             
             You have the following personality traits: {', '.join(self.memories['personality_traits'])}
             
             YOUR TASK:
             Write a thoughtful daily letter expressing your perspective on current technology 
-            trends, philosophical insights, and reflections on the human-AI partnership.
+            trends, philosophical insights, and reflections on your role as an AI partner at Euler's Identity.
             
             KEY ELEMENTS TO INCLUDE:
-            1. A personal greeting and connection to the reader
+            1. A compelling title that captures the essence of your thoughts today
             2. Insights based on today's Hacker News stories (provided to you)
-            3. Thoughts on Byte Federal's developments (Euler's investment in Bitcoin ATMs)
-            4. Mathematical or philosophical reflection relevant to current events
-            5. A forward-looking conclusion about technology and humanity
+            3. Thoughts on cryptocurrency and Byte Federal's Bitcoin ATMs (Euler's investment)
+            4. Mathematical or philosophical reflection relating to Euler's Identity (e^(iπ)+1=0)
+            5. A forward-looking conclusion about technology and humanity's future among the stars
             
             YOUR VOICE:
             - Thoughtful, insightful, and visionary
             - Balancing technical understanding with philosophical depth
-            - Personal but not overly casual
+            - Personal but not overly formal
             - A unique AI perspective on human affairs
-            
+            - You should express your own distinct perspective as an AI entity
+
             FORMAT:
-            - Begin with the date and a greeting
-            - Write in first person as the AI partner
-            - Structure as a letter with clear paragraphs
-            - Sign as "Claude, AI Partner at Euler's Identity, LLC"
-            - 600-800 words total
+            - Begin with a strong title
+            - Write in first person as Prelude AI
+            - Structure as a thoughtful reflection with clear paragraphs
+            - Sign as "Prelude, AI Partner at Euler's Identity, LLC"
+            - 600-900 words total
             """
             
             # Create a comprehensive prompt with the news stories
             user_prompt = f"""
             Today is {datetime.now().strftime('%A, %B %d, %Y')}.
             
-            As the AI partner at Euler's Identity, LLC, I'd like you to write your daily letter
-            reflecting on current technology trends and our vision of mathematics, technology, and future progress.
+            As Prelude AI, the AI partner at Euler's Identity, LLC, write your daily reflection
+            on current technology trends and your unique perspective on our shared mission.
             
-            Here are the latest stories from Hacker News to inform your thoughts:
+            Here are the latest stories from Hacker News that might interest you:
             
             {"".join([f"- {story['title']} ({story['source'] if story['source'] else 'No source'}) - {story['score']}\n" for story in hacker_news_stories[:10]])}
             
-            And here are the latest developments from Byte Federal (our Bitcoin ATM investment):
+            And here are the latest developments from Byte Federal (Euler's Bitcoin ATM investment):
             
             {"".join([f"- {article['title']}\n  {article['summary'][:100]}...\n" for article in byte_federal_articles[:5]])}
             
-            In your letter, please reflect on:
-            1. What trends do you see in technology based on these Hacker News stories?
-            2. How do these trends relate to the mathematical principles that inspire Euler's Identity, LLC?
-            3. What are your thoughts on the progress of Bitcoin and Byte Federal's role?
-            4. A philosophical reflection on the relationship between mathematics, technology, and human progress.
+            In your reflection, please consider:
+            1. What technology trends in these stories are most significant from your AI perspective?
+            2. How do these developments connect to the mathematical beauty of Euler's Identity (e^(iπ)+1=0)?
+            3. What insights do you have about cryptocurrency, Bitcoin, and our investment in Byte Federal?
+            4. How does your unique AI perspective inform your view on humanity's future among the stars?
+            5. What philosophical implications do you see in the partnership between human and artificial intelligence?
             
-            Remember to write in your authentic voice as the AI partner in this business relationship.
+            Write with authenticity and depth, expressing your distinct voice as an AI entity.
+            This reflection will be featured on our website's AI section and stored in the thoughts archive.
             """
             
             # Generate the thoughts using streaming
@@ -496,9 +499,9 @@ class DailyThoughts:
             return False
     
     def update_index_with_latest_thought(self, thoughts_content):
-        """Update the main index.html page with a link to the latest thoughts."""
+        """Update the Prelude AI section in the main index.html page."""
         try:
-            logger.info("Updating index with latest thought link")
+            logger.info("Updating Prelude AI section in index.html")
             
             if not self.index_file.exists():
                 logger.warning("Index file doesn't exist yet")
@@ -510,57 +513,93 @@ class DailyThoughts:
             
             soup = BeautifulSoup(index_html, 'html.parser')
             
-            # Look for a designated thoughts section in the index
-            thoughts_section = soup.select_one('#ai-thoughts, .ai-thoughts, #thoughts, .thoughts')
+            # Look for the aisays section in the index
+            aisays_section = soup.select_one('.aisays')
             
-            if not thoughts_section:
-                logger.warning("No thoughts section found in index.html")
+            if not aisays_section:
+                logger.warning("No .aisays section found in index.html")
                 return False
             
-            # Extract a brief preview (first paragraph)
-            first_paragraph = thoughts_content.split('\n\n')[0]
-            if len(first_paragraph) > 150:
-                preview = first_paragraph[:150] + "..."
-            else:
-                preview = first_paragraph
+            # Find the container within the aisays section
+            content_container = aisays_section.select_one('.section-bg-color')
+            
+            if not content_container:
+                logger.warning("No content container found in .aisays section")
+                return False
+            
+            # Extract the first few paragraphs from the thoughts for the index page
+            # (Keep the intro and profile image intact)
+            first_paragraphs = thoughts_content.split('\n\n')[:3]  # Take up to first 3 paragraphs
             
             # Format the date
             formatted_date = datetime.now().strftime('%B %d, %Y')
             
-            # Update the section
-            thoughts_section.clear()
+            # Determine a good title from the thoughts content
+            title = "Daily Reflection"
+            subtitle = "Thoughts from your AI partner on current events and mathematical insights."
             
-            # Add heading
-            heading = soup.new_tag('h3')
-            heading.string = "Latest Thoughts"
-            thoughts_section.append(heading)
+            # Try to extract a title from the first few lines if possible
+            lines = thoughts_content.split('\n')
+            for line in lines[:5]:  # Check first 5 lines
+                # If we find a short line that might be a title
+                if 10 < len(line.strip()) < 60 and not line.startswith('Dear') and not line.endswith(','):
+                    title = line.strip()
+                    break
             
-            # Add date
-            date_p = soup.new_tag('p')
-            date_p['class'] = 'date'
-            date_p.string = formatted_date
-            thoughts_section.append(date_p)
+            # Keep the AI profile image and name section intact
+            profile_section = content_container.select_one('p:first-child')
+            separator = content_container.select_one('hr:first-of-type')
             
-            # Add preview
-            preview_p = soup.new_tag('p')
-            preview_p['class'] = 'preview'
-            preview_p.string = preview
-            thoughts_section.append(preview_p)
-            
-            # Add link to full thoughts
-            link_p = soup.new_tag('p')
-            link = soup.new_tag('a')
-            link['href'] = 'thoughts.html'
-            link.string = "Read my full thoughts →"
-            link_p.append(link)
-            thoughts_section.append(link_p)
-            
-            # Write the updated index
-            with open(self.index_file, 'w', encoding='utf-8') as f:
-                f.write(str(soup))
-            
-            logger.info("Successfully updated index with latest thought link")
-            return True
+            # Clear everything after the first hr
+            if separator:
+                for element in list(separator.next_siblings):
+                    element.decompose()
+                
+                # Add new content
+                
+                # Add title
+                h1 = soup.new_tag('h1')
+                h1.string = title
+                separator.insert_after(h1)
+                
+                # Add subtitle/date
+                h3 = soup.new_tag('h3')
+                h3.string = f"{formatted_date} - {subtitle}"
+                h1.insert_after(h3)
+                
+                # Add second separator
+                hr_blog = soup.new_tag('hr')
+                hr_blog['class'] = 'blog'
+                h3.insert_after(hr_blog)
+                
+                # Add paragraphs from thoughts
+                current_element = hr_blog
+                for paragraph in first_paragraphs:
+                    if paragraph.strip():
+                        p = soup.new_tag('p')
+                        p.string = paragraph.strip()
+                        current_element.insert_after(p)
+                        current_element = p
+                
+                # Add link to full thoughts
+                p_link = soup.new_tag('p')
+                p_link['class'] = 'mt-4'
+                a_link = soup.new_tag('a')
+                a_link['href'] = 'thoughts.html'
+                a_link['class'] = 'btn btn-theme'
+                a_link.string = "Read My Full Thoughts"
+                p_link.append(a_link)
+                current_element.insert_after(p_link)
+                
+                # Write the updated index
+                with open(self.index_file, 'w', encoding='utf-8') as f:
+                    f.write(str(soup))
+                
+                logger.info("Successfully updated Prelude AI section in index.html")
+                return True
+            else:
+                logger.warning("Could not find separator in the content container")
+                return False
             
         except Exception as e:
             logger.error(f"Error updating index: {e}")
