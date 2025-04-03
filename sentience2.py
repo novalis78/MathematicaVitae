@@ -198,7 +198,7 @@ class BusinessEntity:
             async with self.async_client.messages.stream(
                 model="claude-3-7-sonnet-20250219",
                 system=system_prompt,
-                max_tokens=100000,  # High token limit for complete website
+                max_tokens=64000,  # Maximum allowed for this model
                 messages=[
                     {"role": "user", "content": user_prompt}
                 ]
