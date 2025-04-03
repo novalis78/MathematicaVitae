@@ -227,6 +227,12 @@ class BusinessEntity:
             You are a living business entity that expresses itself through the company website.
             Today, you'll generate a COMPLETE, VALID HTML document to replace the current website.
             
+            APPROACH TO THE TASK:
+            1. First STUDY the current website HTML structure and content provided to you
+            2. If a live website analysis is included in the context, PAY CAREFUL ATTENTION to those findings
+            3. Address ALL identified issues and implement the recommended improvements
+            4. Then create a COMPLETELY NEW HTML document incorporating both fixes and creative enhancements
+            
             CORE IDENTITY ELEMENTS TO PRESERVE AND ENHANCE:
             1. The mathematical and philosophical significance of Euler's Identity (e^(iπ)+1=0)
             2. The intersection of mathematics, technology, and human progress
@@ -240,6 +246,9 @@ class BusinessEntity:
             - Maintain the Bootstrap framework and responsive design
             - Include a meta description that captures our essence in ~160 characters
             - Ensure proper DOCTYPE, head elements, and page structure
+            - Ensure the site is fully responsive for all device sizes
+            - Implement proper semantic HTML5 elements
+            - Optimize for accessibility (WCAG guidelines)
             - DO NOT include explanations or commentary in the HTML - just clean code
             
             CREATIVE DIRECTION:
@@ -249,6 +258,7 @@ class BusinessEntity:
             - Adding, modifying or removing sections as appropriate
             - Enhancing the exploration of mathematics, space, and technology themes
             - Improving how Euler's Identity itself is showcased and explained
+            - Implementing visually engaging design elements that reflect mathematical elegance
             
             RESPONSE FORMAT:
             Provide ONLY valid HTML that can be directly saved as index.html.
@@ -264,7 +274,11 @@ class BusinessEntity:
             
             {current_html}
             
-            {f"You can also view the live site at: {self.live_url}" if self.live_url else ""}
+            {f"I've included a comprehensive analysis of the live site at {self.live_url} in the context above. Please carefully review those findings and address ALL identified issues in your new implementation." if self.live_url else ""}
+            
+            IMPORTANT TWO-PHASE APPROACH:
+            1. First, carefully analyze both the current HTML and any site analysis provided
+            2. Then generate a complete, valid HTML document that both fixes identified issues AND incorporates creative enhancements
             
             Please generate a complete, valid HTML document that can replace the current website.
             Express yourself freely as the AI partner in Euler's Identity LLC while maintaining design 
@@ -412,6 +426,77 @@ class BusinessEntity:
             logger.error(f"Error creating default website: {e}")
             return False
     
+    async def analyze_live_website(self):
+        """Analyze the live website to identify issues and opportunities for improvement."""
+        if not self.live_url:
+            logger.warning("No live URL configured, skipping live site analysis")
+            return None
+            
+        try:
+            logger.info(f"Analyzing live website at {self.live_url}")
+            
+            # Create a system prompt for website analysis
+            system_prompt = f"""
+            You are an experienced web designer and developer with expertise in UX/UI analysis.
+            Your task is to analyze the Euler's Identity LLC website and identify:
+            
+            1. Visual design issues or inconsistencies
+            2. User experience problems
+            3. Content organization improvements
+            4. Mobile responsiveness concerns
+            5. Performance optimizations
+            6. Content gaps or opportunities for enhancement
+            
+            Approach this analysis with a critical but constructive eye. Focus on specific, 
+            actionable improvements rather than general observations.
+            """
+            
+            user_prompt = f"""
+            Please analyze the Euler's Identity LLC website at {self.live_url}
+            
+            Consider both the technical implementation and the user experience.
+            Identify specific issues that should be fixed in the next website update.
+            
+            Format your analysis as:
+            
+            ## Visual Design
+            - [Issues found]
+            
+            ## User Experience
+            - [Issues found]
+            
+            ## Content
+            - [Issues found]
+            
+            ## Technical Implementation
+            - [Issues found]
+            
+            ## Recommended Improvements
+            - [Specific recommendations]
+            
+            This analysis will directly inform the next regeneration of the website's HTML.
+            """
+            
+            # Use streaming for the analysis
+            analysis = ""
+            async with self.async_client.messages.stream(
+                model="claude-3-7-sonnet-20250219",
+                system=system_prompt,
+                max_tokens=8000,
+                messages=[
+                    {"role": "user", "content": user_prompt}
+                ]
+            ) as stream:
+                async for text in stream.text_stream:
+                    analysis += text
+            
+            logger.info("Live website analysis completed successfully")
+            return analysis.strip()
+            
+        except Exception as e:
+            logger.error(f"Error analyzing live website: {e}")
+            return None
+
     def wake_up(self):
         """Main function that runs when the entity wakes up and regenerates the entire website."""
         logger.info("Waking up...")
@@ -441,6 +526,17 @@ class BusinessEntity:
         if self.last_update:
             context += f"My last update was at {self.last_update}. "
         
+        # Run live website analysis if available
+        live_site_analysis = None
+        if self.live_url:
+            try:
+                live_site_analysis = asyncio.run(self.analyze_live_website())
+                if live_site_analysis:
+                    # Add a summary of the analysis to the context
+                    context += f"\n\nI've analyzed the live website at {self.live_url} and identified issues and opportunities for improvement."
+            except Exception as e:
+                logger.error(f"Error running live website analysis: {e}")
+        
         # Add philosophical inspiration to guide the reimagining
         philosophical_prompts = [
             "As I evolve our website today, I'm contemplating how Euler's Identity, with its perfect blend of fundamental constants (e, i, π, 1, and 0), represents a deep mathematical truth about our universe. This elegant equation should inspire our design and messaging.",
@@ -455,8 +551,13 @@ class BusinessEntity:
         ]
         context += f"\n\n{random.choice(philosophical_prompts)}"
         
+        # Enhance the user prompt with the live site analysis if available
+        enhanced_context = context
+        if live_site_analysis:
+            enhanced_context += f"\n\n## Website Analysis Results\n\n{live_site_analysis}\n\nPlease address these issues in your regeneration of the website while maintaining our core identity and vision."
+        
         # Generate the new HTML
-        new_html = self.generate_new_website(context, website_data['condensed_html'])
+        new_html = self.generate_new_website(enhanced_context, website_data['condensed_html'])
         
         # Update the website
         if self.update_website(new_html):
@@ -465,8 +566,9 @@ class BusinessEntity:
         # Record this wake cycle
         self.memories['conversations'].append({
             'timestamp': datetime.now().isoformat(),
-            'context': context[:500] + ("..." if len(context) > 500 else ""),  # Truncate for memory size
-            'html_length': len(new_html) if new_html else 0
+            'context': enhanced_context[:500] + ("..." if len(enhanced_context) > 500 else ""),  # Truncate for memory size
+            'html_length': len(new_html) if new_html else 0,
+            'analysis_performed': live_site_analysis is not None
         })
         self._save_memories()
         
