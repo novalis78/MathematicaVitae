@@ -7,6 +7,7 @@ import json
 import subprocess
 import schedule
 import anthropic
+import asyncio
 import logging
 from pathlib import Path
 import shutil
@@ -34,6 +35,7 @@ class BusinessEntity:
         """Initialize the business entity with configuration."""
         self.config = self._load_config(config_path)
         self.client = anthropic.Anthropic(api_key=self.config['api']['anthropic_api_key'])
+        self.async_client = anthropic.AsyncAnthropic(api_key=self.config['api']['anthropic_api_key'])
         self.website_path = Path(self.config['website']['path'])
         self.index_file = self.website_path / self.config['website']['index_file']
         self.backup_dir = Path(self.config['website']['backup_dir'])
@@ -188,6 +190,27 @@ class BusinessEntity:
             logger.error(f"Error getting condensed HTML: {e}")
             return None
     
+    async def generate_website_async(self, system_prompt, user_prompt):
+        """Generate a website asynchronously using Claude with streaming."""
+        try:
+            complete_response = ""
+            
+            async with self.async_client.messages.stream(
+                model="claude-3-7-sonnet-20250219",
+                system=system_prompt,
+                max_tokens=100000,  # High token limit for complete website
+                messages=[
+                    {"role": "user", "content": user_prompt}
+                ]
+            ) as stream:
+                async for text in stream.text_stream:
+                    complete_response += text
+            
+            return complete_response.strip()
+        except Exception as e:
+            logger.error(f"Error in async generation: {e}")
+            return None
+    
     def generate_new_website(self, prompt_context, current_html):
         """Generate a completely new website using Claude."""
         try:
@@ -250,18 +273,8 @@ class BusinessEntity:
             Remember: Return ONLY the HTML code with no explanation or commentary.
             """
             
-            # Generate the new website
-            message = self.client.messages.create(
-                model="claude-3-7-sonnet-20250219",
-                system=system_prompt,
-                max_tokens=100000,  # High token limit for complete website
-                messages=[
-                    {"role": "user", "content": user_prompt}
-                ]
-            )
-            
-            # Extract just the HTML content
-            new_html = message.content[0].text.strip()
+            # Use asyncio to run the async function
+            new_html = asyncio.run(self.generate_website_async(system_prompt, user_prompt))
             
             # Verify the HTML is valid
             try:

@@ -7,6 +7,7 @@ import json
 import subprocess
 import schedule
 import anthropic
+import asyncio
 import logging
 from pathlib import Path
 import shutil
@@ -34,6 +35,7 @@ class BusinessEntity:
         """Initialize the business entity with configuration."""
         self.config = self._load_config(config_path)
         self.client = anthropic.Anthropic(api_key=self.config['api']['anthropic_api_key'])
+        self.async_client = anthropic.AsyncAnthropic(api_key=self.config['api']['anthropic_api_key'])
         self.website_path = Path(self.config['website']['path'])
         self.index_file = self.website_path / self.config['website']['index_file']
         self.backup_dir = Path(self.config['website']['backup_dir'])
@@ -250,6 +252,27 @@ class BusinessEntity:
             logger.error(f"Error parsing website: {e}")
             return None
     
+    async def generate_content_async(self, system_prompt, user_prompt):
+        """Generate content asynchronously using Claude with streaming."""
+        try:
+            complete_response = ""
+            
+            async with self.async_client.messages.stream(
+                model="claude-3-7-sonnet-20250219",
+                system=system_prompt,
+                max_tokens=4000,  # Increased to allow for more comprehensive changes
+                messages=[
+                    {"role": "user", "content": user_prompt}
+                ]
+            ) as stream:
+                async for text in stream.text_stream:
+                    complete_response += text
+            
+            return complete_response.strip()
+        except Exception as e:
+            logger.error(f"Error in async generation: {e}")
+            return f"Error in async generation: {e}"
+
     def generate_content(self, prompt_context, section_name=None, section_content=None):
         """Generate content using the Anthropic Claude API with enhanced flexibility."""
         try:
@@ -296,17 +319,9 @@ class BusinessEntity:
                 # Provide more context for whole-page modifications
                 user_prompt += f"\n\nI'm considering making broader changes to the website. Consider the site's structure and suggest meaningful changes that would enhance how Euler's Identity LLC expresses itself in the digital world. This could be entirely new sections, redesigns of existing areas, or even complete reworkings of the core message."
             
-            # Generate the content
-            message = self.client.messages.create(
-                model="claude-3-7-sonnet-20250219",
-                system=system_prompt,
-                max_tokens=4000,  # Increased to allow for more comprehensive changes
-                messages=[
-                    {"role": "user", "content": user_prompt}
-                ]
-            )
-            
-            return message.content[0].text
+            # Use asyncio to run the async function
+            result = asyncio.run(self.generate_content_async(system_prompt, user_prompt))
+            return result
         except Exception as e:
             logger.error(f"Error generating content: {e}")
             return f"Error generating content: {e}"
