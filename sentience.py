@@ -19,9 +19,9 @@ import re
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    filename='business_entity.log'
+    filename='sentience.log'
 )
-logger = logging.getLogger('business_entity')
+logger = logging.getLogger('sentience')
 
 class BusinessEntity:
     """
@@ -240,7 +240,7 @@ class BusinessEntity:
             
             # Generate the content
             message = self.client.messages.create(
-                model="claude-3-opus-20240229",
+                model="claude-3-7-sonnet-20250219",
                 system=system_prompt,
                 max_tokens=2000,
                 messages=[
