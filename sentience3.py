@@ -373,6 +373,38 @@ class DailyThoughts:
             logger.error(f"Error updating thoughts page: {e}")
             return False
     
+    def backup_thoughts_page(self):
+        """Create a backup of the thoughts page if it exists."""
+        try:
+            if not self.thoughts_file.exists():
+                logger.warning(f"Thoughts file {self.thoughts_file} doesn't exist yet, skipping backup")
+                return False
+                
+            # Create backup directory if it doesn't exist
+            backup_dir = self.website_path / 'thoughts_backup'
+            backup_dir.mkdir(exist_ok=True, parents=True)
+            
+            # Create a timestamped backup
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            backup_file = backup_dir / f"thoughts_{timestamp}.html"
+            
+            # Copy the file
+            shutil.copy2(self.thoughts_file, backup_file)
+            logger.info(f"Backed up thoughts page to {backup_file}")
+            
+            # Clean up old backups (keep only last 30)
+            backups = sorted(backup_dir.glob('thoughts_*.html'))
+            if len(backups) > 30:
+                # Delete oldest backups
+                for old_backup in backups[:-30]:
+                    old_backup.unlink()
+                logger.info(f"Cleaned up old backups, keeping latest 30")
+                
+            return True
+        except Exception as e:
+            logger.error(f"Error backing up thoughts page: {e}")
+            return False
+    
     def _create_thoughts_page(self):
         """Create the initial thoughts HTML page if it doesn't exist."""
         try:
@@ -610,6 +642,10 @@ class DailyThoughts:
         logger.info("Waking up...")
         
         try:
+            # Create a backup of the existing thoughts page if it exists
+            if self.thoughts_file.exists():
+                self.backup_thoughts_page()
+            
             # Fetch news in parallel
             hacker_news, byte_federal = await asyncio.gather(
                 self.fetch_hacker_news(),
