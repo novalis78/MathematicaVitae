@@ -844,7 +844,7 @@ class EnhancedDailyThoughts:
             tweet_text += first_paragraph
             
             # Add website link
-            website_url = self.config['website'].get('live_url', 'https://eulersidentity.com/thoughts.html')
+            website_url = self.config['website'].get('live_url', 'https://eulersidentity.io/thoughts.html')
             tweet_text += f"\n\nRead more: {website_url}"
             
             # Post to Twitter
