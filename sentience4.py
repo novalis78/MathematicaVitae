@@ -866,14 +866,25 @@ class EnhancedDailyThoughts:
             if self.thoughts_file.exists():
                 self.backup_thoughts_page()
             
-            # Fetch news and partner tweets in parallel
-            hacker_news, byte_federal, partner_tweets = await asyncio.gather(
-                self.fetch_hacker_news(),
-                self.fetch_byte_federal_news(),
-                self.fetch_partner_tweets()
-            )
+            # Fetch news (always required)
+            hacker_news_task = self.fetch_hacker_news()
+            byte_federal_task = self.fetch_byte_federal_news()
             
-            # Generate thoughts based on the news and partner tweets
+            # Try to fetch partner tweets but make it optional
+            partner_tweets = []
+            try:
+                if self.twitter_api:
+                    partner_tweets = await self.fetch_partner_tweets()
+                else:
+                    logger.info("Twitter API not configured, skipping partner tweets")
+            except Exception as e:
+                logger.warning(f"Could not fetch partner tweets, continuing without them: {e}")
+            
+            # Complete the news fetching
+            hacker_news = await hacker_news_task
+            byte_federal = await byte_federal_task
+            
+            # Generate thoughts based on the news and partner tweets (even if empty)
             thoughts = await self.generate_daily_thoughts(hacker_news, byte_federal, partner_tweets)
             
             if thoughts:
@@ -883,8 +894,15 @@ class EnhancedDailyThoughts:
                 # Update the main index with a link to the latest thoughts
                 self.update_index_with_latest_thought(thoughts)
                 
-                # Post to Twitter
-                self.post_to_twitter(thoughts)
+                # Try to post to Twitter but make it optional
+                twitter_success = False
+                try:
+                    if self.twitter_api:
+                        twitter_success = self.post_to_twitter(thoughts)
+                    else:
+                        logger.info("Twitter API not configured, skipping tweet")
+                except Exception as e:
+                    logger.warning(f"Could not post to Twitter, continuing: {e}")
                 
                 # Store in memory
                 self.memories['daily_thoughts'].append({
@@ -893,7 +911,7 @@ class EnhancedDailyThoughts:
                     'hacker_news_count': len(hacker_news),
                     'byte_federal_count': len(byte_federal),
                     'partner_tweets_count': len(partner_tweets),
-                    'posted_to_twitter': True
+                    'posted_to_twitter': twitter_success
                 })
                 
                 # Store news insights for future reference
@@ -903,9 +921,15 @@ class EnhancedDailyThoughts:
                     'top_byte_federal': [article['title'] for article in byte_federal[:3]]
                 }
                 
+                # If we have partner tweets, store them too
+                if partner_tweets:
+                    self.memories['partner_tweets'][today] = partner_tweets
+                
                 self._save_memories()
                 
                 logger.info("Successfully generated and published daily thoughts")
+                if not twitter_success and self.twitter_api:
+                    logger.warning("Note: Twitter posting was unsuccessful - website was updated")
             else:
                 logger.error("Failed to generate thoughts")
         
